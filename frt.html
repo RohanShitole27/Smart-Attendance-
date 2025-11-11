@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance - Camera-Based System</title>
+    <!-- Face-API for facial recognition -->
+    <script async src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --light-bg: #f3f4f6;
+            --dark-text: #1f2937;
+            --border-color: #e5e7eb;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        nav {
+            display: flex;
+            gap: 20px;
+        }
+
+        nav button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        nav button:hover,
+        nav button.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        main {
+            padding: 30px 0;
+            min-height: calc(100vh - 80px);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: var(--light-bg);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--light-bg);
+            color: var(--dark-text);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark-text);
+        }
+
+        input[type="file"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input[type="file"]:focus,
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--light-bg);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Camera Styles */
+        #cameraStream,
+        #groupPhotoPreview,
+        #studentPhotoPreview {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 12px;
+            display: block;
+            margin: 20px auto;
+            border: 2px solid var(--border-color);
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        /* Student Upload Grid */
+        .student-upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .student-photo-card {
+            background: var(--light-bg);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border: 2px dashed var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .student-photo-card:hover {
+            border-color: var(--primary-color);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .student-photo-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .student-photo-card input[type="file"] {
+            display: none;
+        }
+
+        /* Attendance Results */
+        .attendance-results {
+            margin-top: 30px;
+        }
+
+        .result-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .result-card {
+            background: var(--light-bg);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .result-card.success {
+            border-left-color: var(--success-color);
+        }
+
+        .result-card.danger {
+            border-left-color: var(--danger-color);
+        }
+
+        .result-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        /* Attendance Table */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--light-bg);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark-text);
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tbody tr:hover {
+            background: var(--light-bg);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Alert Styles */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #0c2d6b;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid var(--light-bg);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.3s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .modal-content {
+                max-width: 95%;
+                padding: 20px;
+            }
+
+            .student-upload-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+
+            .result-summary {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <span>📷 Smart Attendance (Camera-Based)</span>
+                </div>
+                <nav>
+                    <button class="nav-btn active" data-section="student-setup">Setup</button>
+                    <button class="nav-btn" data-section="camera-attendance">Camera</button>
+                    <button class="nav-btn" data-section="results">Results</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Student Setup Section -->
+        <section id="student-setup" class="section active">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Step 1: Upload Student Reference Images</h2>
+                </div>
+                <div class="card-body">
+                    <p style="margin-bottom: 20px; color: #6b7280;">
+                        Upload individual photos of each student. These will be used to identify students in the group class photo.
+                        For best results, use clear facial photos with good lighting.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Select Class</label>
+                        <select id="classSelect">
+                            <option value="">-- Select Class --</option>
+                            <option value="10A">Class 10-A</option>
+                            <option value="10B">Class 10-B</option>
+                            <option value="11A">Class 11-A</option>
+                            <option value="12A">Class 12-A</option>
+                        </select>
+                    </div>
+
+                    <div id="studentUploadContainer" style="display: none;">
+                        <p style="margin: 20px 0; color: #6b7280; font-weight: 500;">
+                            Click on each student's card to upload their reference photo:
+                        </p>
+                        <div class="student-upload-grid" id="studentPhotosGrid"></div>
+                    </div>
+
+                    <button class="btn btn-primary btn-block" onclick="loadStudentsForClass()" style="margin-top: 20px;">
+                        Load Students for Selected Class
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 30px;">
+                <div class="card-header">
+                    <h2 class="card-title">Uploaded Reference Images</h2>
+                </div>
+                <div class="card-body">
+                    <div id="uploadedPhotosStatus">
+                        <p style="color: #6b7280;">No photos uploaded yet. Select a class and upload student photos above.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Camera Attendance Section -->
+        <section id="camera-attendance" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Step 2: Capture Class Photo</h2>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>Select Class</label>
+                        <select id="cameraClassSelect">
+                            <option value="">-- Select Class --</option>
+                            <option value="10A">Class 10-A</option>
+                            <option value="10B">Class 10-B</option>
+                            <option value="11A">Class 11-A</option>
+                            <option value="12A">Class 12-A</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Subject/Period</label>
+                        <input type="text" id="subjectInput" placeholder="e.g., Mathematics - Period 1">
+                    </div>
+
+                    <p style="margin: 20px 0; padding: 15px; background: #dbeafe; border-radius: 8px; color: #0c2d6b; border-left: 4px solid var(--primary-color);">
+                        ℹ️ <strong>Instructions:</strong> Choose one of the following methods to capture attendance:
+                    </p>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="openCameraModal()">
+                            📷 Take Photo with Camera
+                        </button>
+                        <button class="btn btn-primary" onclick="document.getElementById('groupPhotoInput').click();">
+                            📁 Upload Group Photo
+                        </button>
+                    </div>
+
+                    <input type="file" id="groupPhotoInput" accept="image/*" style="display: none;" onchange="handleGroupPhotoUpload(event)">
+
+                    <div id="groupPhotoPreviewContainer" style="display: none; margin-top: 30px; text-align: center;">
+                        <h3 style="margin-bottom: 15px;">Group Photo Preview</h3>
+                        <img id="groupPhotoPreview" alt="Group Photo">
+                        <button class="btn btn-success btn-block" onclick="processGroupPhoto()" style="margin-top: 15px;">
+                            Process Photo & Mark Attendance
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Camera Modal -->
+            <div id="cameraModal" class="modal">
+                <div class="modal-content">
+                    <button class="modal-close" onclick="closeCameraModal()">&times;</button>
+                    <h2 style="margin-bottom: 20px;">Capture Class Photo</h2>
+
+                    <div style="text-align: center;">
+                        <video id="cameraStream" autoplay playsinline style="display: none;"></video>
+                        <canvas id="photoCanvas" style="display: none;"></canvas>
+
+                        <div id="cameraPreview">
+                            <video id="cameraStream" autoplay playsinline style="width: 100%; max-width: 600px; border-radius: 12px; border: 2px solid var(--border-color);"></video>
+                        </div>
+
+                        <div class="camera-controls">
+                            <button class="btn btn-success" onclick="captureGroupPhoto()">📸 Capture Photo</button>
+                            <button class="btn btn-secondary" onclick="closeCameraModal()">Cancel</button>
+                        </div>
+
+                        <div id="capturedPhotoContainer" style="display: none; text-align: center; margin-top: 20px;">
+                            <h3>Captured Photo</h3>
+                            <canvas id="capturedPhotoCanvas" style="display: block; max-width: 600px; border-radius: 12px; margin: 20px auto; border: 2px solid var(--border-color);"></canvas>
+                            <button class="btn btn-success" onclick="usePhoto()">Use This Photo</button>
+                            <button class="btn btn-secondary" onclick="retakePhoto()">Retake Photo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Processing Results</h2>
+                </div>
+                <div class="card-body">
+                    <div id="processingStatus" style="display: none; text-align: center;">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 10px; color: #6b7280;">Analyzing faces in the photo...</p>
+                    </div>
+
+                    <div id="resultsContainer" style="display: none;">
+                        <div class="result-summary">
+                            <div class="result-card success">
+                                <div class="result-label">Present</div>
+                                <div class="result-value" id="presentCount">0</div>
+                            </div>
+                            <div class="result-card danger">
+                                <div class="result-label">Absent</div>
+                                <div class="result-value" id="absentCount">0</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="result-label">Not Verified</div>
+                                <div class="result-value" id="notVerifiedCount">0</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="result-label">Accuracy</div>
+                                <div class="result-value" id="accuracyPercent">0%</div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <button class="btn btn-success" onclick="confirmAndSaveAttendance()">✓ Confirm & Save Attendance</button>
+                            <button class="btn btn-secondary" onclick="resetResults()" style="margin-left: 10px;">Reset</button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Roll No</th>
+                                        <th>Student Name</th>
+                                        <th>Status</th>
+                                        <th>Confidence</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceResultsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="noResultsMessage" style="text-align: center; padding: 40px; color: #6b7280;">
+                        <p>No attendance data yet. Capture a class photo to get started.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('successModal')">&times;</button>
+            <div style="text-align: center; padding: 40px 0;">
+                <div style="font-size: 60px; margin-bottom: 20px;">✓</div>
+                <h2 style="margin-bottom: 10px;">Attendance Saved!</h2>
+                <p style="color: #6b7280; margin-bottom: 20px;">The attendance has been processed and saved successfully.</p>
+                <button class="btn btn-primary btn-block" onclick="closeModal('successModal'); resetSystem();">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== FACE-API INITIALIZATION ====================
+        let modelsLoaded = false;
+
+        async function loadFaceAPIModels() {
+            if (modelsLoaded) return;
+
+            try {
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                modelsLoaded = true;
+                console.log('Face-API models loaded successfully');
+            } catch (error) {
+                console.error('Error loading Face-API models:', error);
+                showAlert('Error loading facial recognition models. Please refresh the page.', 'danger');
+            }
+        }
+
+        // ==================== APP STATE ====================
+        const appState = {
+            students: [],
+            studentPhotos: {},      // { studentId: imageData }
+            currentClass: null,
+            groupPhoto: null,
+            attendanceResults: {},
+            detectedFaces: []
+        };
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFaceAPIModels();
+            setupNavigation();
+            generateSampleStudents();
+        });
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => navigateToSection(e.target.dataset.section));
+            });
+        }
+
+        function navigateToSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(sectionId).classList.add('active');
+            document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ==================== STUDENT SETUP ====================
+        function generateSampleStudents() {
+            const names = [
+                'Raj Kumar', 'Priya Singh', 'Amit Patel', 'Neha Sharma', 'Rohit Verma',
+                'Ananya Gupta', 'Vikram Singh', 'Sneha Patel', 'Arjun Kumar', 'Divya Sharma',
+                'Sanjay Reddy', 'Pooja Nair', 'Manish Yadav', 'Ritika Singh', 'Harsh Verma'
+            ];
+
+            const students = [];
+            const classes = ['10A', '10B', '11A', '12A'];
+
+            let id = 1;
+            classes.forEach(cls => {
+                names.slice(0, 10).forEach((name, idx) => {
+                    students.push({
+                        id: String(id).padStart(4, '0'),
+                        name: name,
+                        rollNo: idx + 1,
+                        class: cls
+                    });
+                    id++;
+                });
+            });
+
+            appState.students = students;
+        }
+
+        function loadStudentsForClass() {
+            const classValue = document.getElementById('classSelect').value;
+
+            if (!classValue) {
+                showAlert('Please select a class', 'warning');
+                return;
+            }
+
+            appState.currentClass = classValue;
+            const classStudents = appState.students.filter(s => s.class === classValue);
+
+            let html = '';
+            classStudents.forEach(student => {
+                const hasPhoto = appState.studentPhotos[student.id];
+                html += `
+                    <div class="student-photo-card" onclick="triggerFileUpload('${student.id}')">
+                        ${hasPhoto ? `<img src="${hasPhoto}" alt="${student.name}">` : '<div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 40px;">📷</div>'}
+                        <div style="font-size: 12px; margin-top: 8px; font-weight: 500;">${student.name}</div>
+                        <div style="font-size: 11px; color: #9ca3af;">Roll: ${student.rollNo}</div>
+                        <input type="file" id="photo_${student.id}" accept="image/*" onchange="handleStudentPhotoUpload('${student.id}', event)">
+                    </div>
+                `;
+            });
+
+            document.getElementById('studentPhotosGrid').innerHTML = html;
+            document.getElementById('studentUploadContainer').style.display = 'block';
+
+            updateUploadedPhotosStatus();
+        }
+
+        function triggerFileUpload(studentId) {
+            document.getElementById(`photo_${studentId}`).click();
+        }
+
+        function handleStudentPhotoUpload(studentId, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                appState.studentPhotos[studentId] = e.target.result;
+                loadStudentsForClass(); // Refresh grid
+                updateUploadedPhotosStatus();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateUploadedPhotosStatus() {
+            const uploadedCount = Object.keys(appState.studentPhotos).length;
+            const totalCount = appState.students.filter(s => s.class === appState.currentClass).length;
+
+            const statusHtml = `
+                <div class="alert alert-success">
+                    ✓ ${uploadedCount} of ${totalCount} student photos uploaded for Class ${appState.currentClass}
+                </div>
+                ${uploadedCount > 0 ? '<p style="color: #6b7280; margin-top: 10px;">Photos ready for facial recognition. Proceed to camera section.</p>' : ''}
+            `;
+
+            document.getElementById('uploadedPhotosStatus').innerHTML = statusHtml;
+        }
+
+        // ==================== CAMERA ATTENDANCE ====================
+        function openCameraModal() {
+            document.getElementById('cameraModal').classList.add('active');
+            startCamera();
+        }
+
+        function closeCameraModal() {
+            stopCamera();
+            document.getElementById('cameraModal').classList.remove('active');
+            document.getElementById('capturedPhotoContainer').style.display = 'none';
+            document.getElementById('cameraPreview').style.display = 'block';
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' }
+                });
+                const video = document.getElementById('cameraStream');
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Camera error:', error);
+                showAlert('Unable to access camera. Please check permissions.', 'danger');
+            }
+        }
+
+        function stopCamera() {
+            const video = document.getElementById('cameraStream');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function captureGroupPhoto() {
+            const video = document.getElementById('cameraStream');
+            const canvas = document.getElementById('capturedPhotoCanvas');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            document.getElementById('cameraPreview').style.display = 'none';
+            document.getElementById('capturedPhotoContainer').style.display = 'block';
+        }
+
+        function retakePhoto() {
+            document.getElementById('cameraPreview').style.display = 'block';
+            document.getElementById('capturedPhotoContainer').style.display = 'none';
+        }
+
+        function usePhoto() {
+            const canvas = document.getElementById('capturedPhotoCanvas');
+            appState.groupPhoto = canvas.toDataURL('image/jpeg');
+
+            document.getElementById('groupPhotoPreview').src = appState.groupPhoto;
+            document.getElementById('groupPhotoPreviewContainer').style.display = 'block';
+
+            closeCameraModal();
+        }
+
+        function handleGroupPhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                appState.groupPhoto = e.target.result;
+                document.getElementById('groupPhotoPreview').src = appState.groupPhoto;
+                document.getElementById('groupPhotoPreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ==================== FACIAL RECOGNITION PROCESSING ====================
+        async function processGroupPhoto() {
+            const classValue = document.getElementById('cameraClassSelect').value;
+
+            if (!classValue) {
+                showAlert('Please select a class', 'warning');
+                return;
+            }
+
+            if (Object.keys(appState.studentPhotos).length === 0) {
+                showAlert('Please upload student reference photos first', 'warning');
+                return;
+            }
+
+            if (!appState.groupPhoto) {
+                showAlert('Please capture or upload a class photo', 'warning');
+                return;
+            }
+
+            // Show processing status
+            document.querySelector('[data-section="results"]').click();
+            document.getElementById('processingStatus').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('noResultsMessage').style.display = 'none';
+
+            try {
+                // Detect faces in group photo
+                const groupImg = new Image();
+                groupImg.src = appState.groupPhoto;
+
+                groupImg.onload = async () => {
+                    const groupDetections = await faceapi
+                        .detectAllFaces(groupImg, new faceapi.TinyFaceDetectorOptions())
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+
+                    console.log('Detected faces in group photo:', groupDetections.length);
+                    appState.detectedFaces = groupDetections;
+
+                    // Load student reference descriptors
+                    const studentDescriptors = await loadStudentFaceDescriptors();
+
+                    // Match faces
+                    const attendanceData = await matchFacesWithStudents(groupDetections, studentDescriptors, classValue);
+
+                    // Display results
+                    displayAttendanceResults(attendanceData, classValue);
+
+                    document.getElementById('processingStatus').style.display = 'none';
+                    document.getElementById('resultsContainer').style.display = 'block';
+                };
+            } catch (error) {
+                console.error('Processing error:', error);
+                showAlert('Error processing photo. Please try again.', 'danger');
+                document.getElementById('processingStatus').style.display = 'none';
+            }
+        }
+
+        async function loadStudentFaceDescriptors() {
+            const classValue = document.getElementById('cameraClassSelect').value;
+            const classStudents = appState.students.filter(s => s.class === classValue);
+            const descriptors = [];
+
+            for (const student of classStudents) {
+                const photoData = appState.studentPhotos[student.id];
+                if (!photoData) continue;
+
+                try {
+                    const img = new Image();
+                    img.src = photoData;
+
+                    await new Promise((resolve) => {
+                        img.onload = async () => {
+                            const detection = await faceapi
+                                .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+                                .withFaceLandmarks()
+                                .withFaceDescriptor();
+
+                            if (detection) {
+                                descriptors.push({
+                                    studentId: student.id,
+                                    name: student.name,
+                                    rollNo: student.rollNo,
+                                    descriptor: detection.descriptor
+                                });
+                            }
+                            resolve();
+                        };
+                    });
+                } catch (error) {
+                    console.log(`Could not load face descriptor for ${student.name}:`, error);
+                }
+            }
+
+            console.log('Loaded descriptors for', descriptors.length, 'students');
+            return descriptors;
+        }
+
+        async function matchFacesWithStudents(detectedFaces, studentDescriptors, classValue) {
+            const classValue_param = classValue;
+            const classStudents = appState.students.filter(s => s.class === classValue_param);
+            const attendanceData = {};
+
+            // Initialize all students as absent
+            classStudents.forEach(student => {
+                attendanceData[student.id] = {
+                    student: student,
+                    status: 'absent',
+                    confidence: 0,
+                    matched: false
+                };
+            });
+
+            // Try to match each detected face
+            detectedFaces.forEach((detection) => {
+                const detectorDescriptor = detection.descriptor;
+                let bestMatch = null;
+                let bestDistance = Infinity;
+
+                studentDescriptors.forEach((student) => {
+                    const distance = faceapi.euclideanDistance(detectorDescriptor, student.descriptor);
+
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestMatch = student;
+                    }
+                });
+
+                // If distance is below threshold (0.6), mark as present
+                if (bestMatch && bestDistance < 0.6) {
+                    const confidence = Math.round((1 - bestDistance) * 100);
+                    attendanceData[bestMatch.studentId] = {
+                        student: bestMatch,
+                        status: 'present',
+                        confidence: confidence,
+                        matched: true,
+                        distance: bestDistance.toFixed(2)
+                    };
+                }
+            });
+
+            return attendanceData;
+        }
+
+        function displayAttendanceResults(attendanceData, classValue) {
+            let presentCount = 0;
+            let absentCount = 0;
+            let notVerifiedCount = 0;
+            let tableHtml = '';
+
+            const classValue_param = classValue;
+            const classStudents = appState.students.filter(s => s.class === classValue_param);
+
+            classStudents.forEach(student => {
+                const data = attendanceData[student.id];
+                let badge, badgeClass;
+
+                if (data.status === 'present') {
+                    presentCount++;
+                    badge = 'Present';
+                    badgeClass = 'badge-success';
+                } else if (!data.matched && Object.keys(appState.studentPhotos).includes(student.id)) {
+                    absentCount++;
+                    badge = 'Absent';
+                    badgeClass = 'badge-danger';
+                } else {
+                    notVerifiedCount++;
+                    badge = 'Not Verified';
+                    badgeClass = 'badge-warning';
+                }
+
+                tableHtml += `
+                    <tr>
+                        <td>${student.rollNo}</td>
+                        <td>${student.name}</td>
+                        <td><span class="badge ${badgeClass}">${badge}</span></td>
+                        <td>${data.confidence}%</td>
+                        <td>
+                            <select class="attendance-override" data-student-id="${student.id}" style="padding: 6px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                <option value="present" ${data.status === 'present' ? 'selected' : ''}>Present</option>
+                                <option value="absent" ${data.status === 'absent' ? 'selected' : ''}>Absent</option>
+                                <option value="leave">Leave</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const accuracy = classStudents.length > 0 ? Math.round((presentCount / classStudents.length) * 100) : 0;
+
+            document.getElementById('presentCount').textContent = presentCount;
+            document.getElementById('absentCount').textContent = absentCount;
+            document.getElementById('notVerifiedCount').textContent = notVerifiedCount;
+            document.getElementById('accuracyPercent').textContent = accuracy + '%';
+            document.getElementById('attendanceResultsTable').innerHTML = tableHtml;
+
+            appState.attendanceResults = attendanceData;
+        }
+
+        // ==================== CONFIRMATION & SAVE ====================
+        function confirmAndSaveAttendance() {
+            // Collect overridden values
+            document.querySelectorAll('.attendance-override').forEach(select => {
+                const studentId = select.dataset.studentId;
+                const status = select.value;
+                if (appState.attendanceResults[studentId]) {
+                    appState.attendanceResults[studentId].status = status;
+                }
+            });
+
+            const classValue = document.getElementById('cameraClassSelect').value;
+            const subject = document.getElementById('subjectInput').value || 'General';
+
+            // Simulate API call
+            console.log('Saving attendance:', {
+                class: classValue,
+                subject: subject,
+                date: new Date().toLocaleDateString(),
+                attendance: appState.attendanceResults
+            });
+
+            showAlert('✓ Attendance saved successfully!', 'success');
+            openModal('successModal');
+        }
+
+        function resetResults() {
+            appState.groupPhoto = null;
+            appState.attendanceResults = {};
+            appState.detectedFaces = [];
+            document.getElementById('groupPhotoInput').value = '';
+            document.getElementById('groupPhotoPreviewContainer').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('noResultsMessage').style.display = 'block';
+            navigateToSection('camera-attendance');
+        }
+
+        function resetSystem() {
+            resetResults();
+            document.getElementById('cameraClassSelect').value = '';
+            document.getElementById('subjectInput').value = '';
+        }
+
+        // ==================== UTILITIES ====================
+        function showAlert(message, type = 'info') {
+            const alertHtml = `<div class="alert alert-${type}">⚠️ ${message}</div>`;
+            const container = document.createElement('div');
+            container.innerHTML = alertHtml;
+
+            const section = document.querySelector('.section.active');
+            if (section && section.firstChild) {
+                section.insertBefore(container.firstElementChild, section.firstChild);
+            }
+
+            setTimeout(() => {
+                document.querySelector('.alert')?.remove();
+            }, 5000);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
